@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual Environment
+ev_venv/
+venv/
+
+# Models
+models/
+*.pkl
+
+# Generated Results
+results/
+features_evaluation.csv
+*.png
+
+# Database
+*.db
+
+# Node
+frontend/node_modules/
+
+# DVC Cache
+.dvc/cache/
+
+data/evbattery_data_combined.csv

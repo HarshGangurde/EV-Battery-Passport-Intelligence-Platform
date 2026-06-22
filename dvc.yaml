@@ -1,0 +1,10 @@
+stages:
+  train:
+    cmd: python train_student_model.py
+    deps:
+    - data/ev_battery_data_with_km.csv
+    - data/student_data.csv
+    - train_student_model.py
+    outs:
+    - features_evaluation.csv
+    - models
