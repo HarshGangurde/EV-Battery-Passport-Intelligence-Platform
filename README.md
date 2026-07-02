@@ -6,6 +6,74 @@ An AI-powered EV Battery Passport platform that predicts battery degradation and
 
 # 🚀 System Architecture
 
+flowchart LR
+
+    U[👤 User]
+
+    FE[⚛️ React + Vite Dashboard]
+
+    API[🚀 FastAPI Backend]
+
+    DB[(🐘 PostgreSQL)]
+
+    MLFLOW[(📊 MLflow)]
+
+    subgraph TRAINING["Model Training Pipeline"]
+
+        D1[Original EV Dataset]
+
+        T1[Teacher Models]
+
+        L1[Latent Feature Generation]
+
+        D2[Student Dataset]
+
+        S1[Student SOH Model]
+
+        PKL[(stage2_soh_model.pkl)]
+
+        D1 --> T1
+        T1 --> L1
+        D2 --> L1
+        L1 --> S1
+        S1 --> PKL
+        S1 --> MLFLOW
+
+    end
+
+    subgraph INFERENCE["Inference Pipeline"]
+
+        M1[Load Student Model]
+
+        P1[Battery Health Prediction]
+
+        P2[SOH Estimation]
+
+        P3[Battery Degradation]
+
+        P4[Risk Rating]
+
+        P5[Anomaly Detection]
+
+        M1 --> P1
+        P1 --> P2
+        P2 --> P3
+        P3 --> P4
+        P4 --> P5
+
+    end
+
+    U --> FE
+    FE --> API
+
+    API --> DB
+    API --> M1
+
+    P5 --> API
+    API --> FE
+
+    API --> DB
+
 ```text
                            ┌────────────────────┐
                            │ React + Vite UI    │
