@@ -1,27 +1,55 @@
 # Python
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
+*.pyd
+*.so
 
 # Virtual Environment
 ev_venv/
 venv/
 
-# Models
-models/
-*.pkl
+# Jupyter
+.ipynb_checkpoints/
 
-# Generated Results
-results/
-features_evaluation.csv
-*.png
-
-# Database
-*.db
-
-# Node
-frontend/node_modules/
+# MLflow
+mlruns/
+mlflow.db
 
 # DVC Cache
 .dvc/cache/
 
-data/evbattery_data_combined.csv
+# Models
+models/
+models/*.pkl
+models/*.joblib
+
+# Dataset
+data/*.csv
+
+# Logs
+*.log
+
+# Environment Variables
+.env
+
+# VS Code
+.vscode/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Python cache
+.pytest_cache/
+
+# Build
+build/
+dist/
+
+# Docker
+*.tar

@@ -12,12 +12,15 @@ import joblib
 import os
 import matplotlib.pyplot as plt
 import seaborn as sns
+import mlflow
+import mlflow.sklearn
 
 # Configuration
 DATA_PATH_ORIGINAL = 'data/ev_battery_data_with_km.csv'  # Ground truth for Stage 1
 DATA_PATH_STUDENT = 'data/student_data.csv'            # Dataset for Stage 2
 MODELS_DIR = 'models'
 os.makedirs(MODELS_DIR, exist_ok=True)
+mlflow.set_experiment("EV_Battery_Passport")
 
 def load_data():
     """Load both datasets."""
@@ -74,7 +77,9 @@ def train_stage_1(df_orig):
         
         # Simple evaluation on training set (since this is just for creating features)
         y_pred = model.predict(X)
-        print(f"  {target} R2: {r2_score(y, y_pred):.4f}")
+        r2 = r2_score(y, y_pred)
+        print(f"  {target} R2: {r2:.4f}")
+        mlflow.log_metric(f"stage1_{target}_r2", r2)
         
         # Save model
         joblib.dump(model, os.path.join(MODELS_DIR, f'stage1_{target}.pkl'))
@@ -163,31 +168,54 @@ def train_stage_2(df_student, stage1_models):
         
         print(f"Model: {name} | R2: {r2:.4f} | RMSE: {rmse:.4f} | MAE: {mae:.4f}")
         results.append({'Model': name, 'R2': r2, 'RMSE': rmse, 'MAE': mae})
-        
+        mlflow.log_metric(f"{name}_r2", r2)
+        mlflow.log_metric(f"{name}_rmse", rmse)
+        mlflow.log_metric(f"{name}_mae", mae)
         if r2 > best_score:
             best_score = r2
             best_model = pipeline
             best_name = name
             
     print(f"\nBest Stage 2 Model: {best_name} (R2={best_score:.4f})")
-    
+    mlflow.log_param("best_model", best_name)
+    mlflow.set_tag("model_version", "Student-v1")
+    mlflow.set_tag("stage", "Stage-2")
+    mlflow.set_tag("framework", "Scikit-Learn")
+    mlflow.log_metric("best_r2", best_score)
     # Save best model
     joblib.dump(best_model, os.path.join(MODELS_DIR, 'stage2_soh_model.pkl'))
-    
+    mlflow.sklearn.log_model(sk_model=best_model,artifact_path="student_model",registered_model_name="EVBatteryStudentModel",serialization_format="pickle") 
+    mlflow.log_artifacts(MODELS_DIR)
     # Save scaler/preprocessor separately if needed, but Pipeline handles it.
     
     return best_model, results, df_student_augmented
 
 if __name__ == "__main__":
     # 1. Load Data
-    df_orig, df_student = load_data()
-    
-    # 2. Stage 1: Latent Feature Estimation
-    stage1_models = train_stage_1(df_orig)
-    
-    # 3. Stage 2: Final Health Estimation
-    best_student_model, evaluation_results, df_augmented = train_stage_2(df_student, stage1_models)
-    
-    # 4. Save analysis results
-    pd.DataFrame(evaluation_results).to_csv("features_evaluation.csv", index=False)
-    print("\nTraining Pipeline Completed. Models saved.")
+    with mlflow.start_run(run_name="teacher_student_training"):
+        mlflow.log_param("dataset_original",DATA_PATH_ORIGINAL)
+        mlflow.set_tag("project", "EV Battery Passport")
+        mlflow.set_tag("author", "Harsh Gangurde")
+        mlflow.set_tag("architecture", "Teacher-Student")
+        mlflow.log_param("dataset_student",DATA_PATH_STUDENT)
+        df_orig, df_student = load_data()
+        mlflow.log_param("original_rows",len(df_orig))
+        mlflow.log_param("student_rows",len(df_student))
+        
+        # 2. Stage 1: Latent Feature Estimation
+        stage1_models = train_stage_1(df_orig)
+        
+        # 3. Stage 2: Final Health Estimation
+        best_student_model, evaluation_results, df_augmented = train_stage_2(df_student, stage1_models)
+        df_augmented.to_csv(
+            "results/student_dataset_augmented.csv",
+            index=False
+        )
+
+        mlflow.log_artifact(
+            "results/student_dataset_augmented.csv"
+        )
+        # 4. Save analysis results
+        pd.DataFrame(evaluation_results).to_csv("features_evaluation.csv", index=False)
+        mlflow.log_artifact("features_evaluation.csv")
+        print("\nTraining Pipeline Completed. Models saved.")

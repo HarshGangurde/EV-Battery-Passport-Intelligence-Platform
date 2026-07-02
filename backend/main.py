@@ -8,10 +8,9 @@ import joblib
 import numpy as np
 import os
 from datetime import date
-import sqlite3
+from db import get_connection
 from database import init_db
-
-init_db()
+from prediction_logger import log_prediction
 
 
 # Configuration
@@ -49,6 +48,7 @@ anomaly_threshold = 0.0
 
 @app.on_event("startup")
 def load_artifacts():
+    init_db()
     global models, anomaly_threshold
     try:
         # Load Stage 1
@@ -91,43 +91,49 @@ import traceback
 @app.post("/register_vehicle")
 def register_vehicle(data: VehicleRegister):
 
-    conn = sqlite3.connect("vehicle.db")
+    conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
-    INSERT OR IGNORE INTO vehicle
-    VALUES(?,?,?,?,?,?)
-    """,
-    (
-        data.user_id,
-        data.vehicle_id,
-        data.battery_type,
-        data.buying_price,
-        data.buying_date,
-        data.manufacture_date
-    ))
+    cursor.execute(
+        """
+        INSERT INTO vehicle
+        VALUES(%s,%s,%s,%s,%s,%s)
+        ON CONFLICT(vehicle_id) DO NOTHING
+        """,
+        (
+            data.user_id,
+            data.vehicle_id,
+            data.battery_type,
+            data.buying_price,
+            data.buying_date,
+            data.manufacture_date
+        )
+    )
 
     if cursor.rowcount == 0:
+        cursor.close()
         conn.close()
-        return {"message":"Vehicle already saved"}
+        return {"message": "Vehicle already saved"}
 
     conn.commit()
+
+    cursor.close()
     conn.close()
 
-    return {"message":"Vehicle Registered Successfully"}
-
+    return {"message": "Vehicle Registered Successfully"}
 @app.post("/predict")
 def predict_health(data: InputData):
-    conn = sqlite3.connect("vehicle.db")
+    conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
         SELECT battery_type, buying_price, buying_date 
         FROM vehicle 
-        WHERE user_id = ? AND vehicle_id = ?
+        WHERE user_id = %s AND vehicle_id = %s
     """, (data.user_id, data.vehicle_id))
     
     vehicle = cursor.fetchone()
+    cursor.close()
     conn.close()
 
     if not vehicle:
@@ -251,6 +257,18 @@ def predict_health(data: InputData):
                  "cobalt_g": 8000    # ~130g/kWh
              }
 
+        log_prediction(
+    vehicle_id=data.vehicle_id,
+    battery_type=battery_type,
+    total_distance=data.total_dist_km,
+    charging_time=data.charging_time_min,
+    predicted_soh=predicted_soh,
+    degradation=final_degradation,
+    estimated_soc=round(final_est_soc,1),
+    anomaly_warning=is_anomaly,
+    risk_rating="Low Risk" if not is_anomaly else "High Risk",
+    model_version="Student-v1"
+)
         
         return {
             "predicted_soh": predicted_soh,
@@ -346,68 +364,16 @@ def health_check():
 @app.get("/get_vehicles/{user_id}")
 def get_vehicles(user_id: str):
 
-    conn = sqlite3.connect("vehicle.db")
+    conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM vehicle WHERE user_id=?", (user_id,))
+    cursor.execute("SELECT * FROM vehicle WHERE user_id=%s", (user_id,))
     rows = cursor.fetchall()
 
+    cursor.close()
     conn.close()
 
     vehicles = []
-    for r in rows:
-        vehicles.append({
-            "user_id": r[0],
-            "vehicle_id": r[1],
-            "battery_type": r[2],
-            "buying_price": r[3],
-            "buying_date": r[4],
-            "manufacture_date": r[5]
-        })
-
-    return {"vehicles": vehicles}
-
-@app.post("/update_vehicle")
-def update_vehicle(data: VehicleRegister):
-
-    conn = sqlite3.connect("vehicle.db")
-    cursor = conn.cursor()
-
-    cursor.execute("""
-    UPDATE vehicle
-    SET battery_type=?,
-        buying_price=?,
-        buying_date=?,
-        manufacture_date=?
-    WHERE user_id=? AND vehicle_id=?
-    """,
-    (
-        data.battery_type,
-        data.buying_price,
-        data.buying_date,
-        data.manufacture_date,
-        data.user_id,
-        data.vehicle_id
-    ))
-
-    conn.commit()
-    conn.close()
-
-    return {"message":"Vehicle Updated Successfully"}
-
-@app.get("/get_vehicles/{user_id}")
-def get_vehicles(user_id: str):
-
-    conn = sqlite3.connect("vehicle.db")
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT * FROM vehicle WHERE user_id=?", (user_id,))
-    rows = cursor.fetchall()
-
-    conn.close()
-
-    vehicles = []
-
     for row in rows:
         vehicles.append({
             "user_id": row[0],
@@ -419,3 +385,31 @@ def get_vehicles(user_id: str):
         })
 
     return {"vehicles": vehicles}
+
+@app.post("/update_vehicle")
+def update_vehicle(data: VehicleRegister):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    UPDATE vehicle
+    SET battery_type=%s,
+        buying_price=%s,
+        buying_date=%s,
+        manufacture_date=%s
+    WHERE user_id=%s AND vehicle_id=%s
+    """,
+    (
+        data.battery_type,
+        data.buying_price,
+        data.buying_date,
+        data.manufacture_date,
+        data.user_id,
+        data.vehicle_id
+    ))
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return {"message":"Vehicle Updated Successfully"}
