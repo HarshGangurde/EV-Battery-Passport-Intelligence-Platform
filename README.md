@@ -1,63 +1,150 @@
-# EV Battery Health Intelligence Platform
+# 🔋 EV Battery Passport Intelligence Platform
 
-## 🚀 Quick Start (Restarting the Project)
-To run the project again after shutting down your computer:
-
-1.  **Simply double-click** the `start_dashboard.bat` file in this folder.
-2.  It will automatically open two terminal windows (Backend & Frontend).
-3.  Open your browser to `http://localhost:5173`.
+An AI-powered EV Battery Passport platform that predicts battery degradation and health using a Teacher–Student Machine Learning architecture. The platform exposes production-style REST APIs with FastAPI, tracks experiments using MLflow, logs predictions into PostgreSQL, and is fully containerized using Docker.
 
 ---
 
-## Manual Startup
-If you prefer running terminals manually:
-1.  **Backend**: `cd backend` -> `uvicorn main:app --reload`
-2.  **Frontend**: `cd frontend` -> `npm run dev`
+# 🚀 System Architecture
+
+```text
+                           ┌────────────────────┐
+                           │ React + Vite UI    │
+                           │  Dashboard         │
+                           └─────────┬──────────┘
+                                     │
+                                     │ REST API
+                                     ▼
+                     ┌────────────────────────────────┐
+                     │        FastAPI Backend         │
+                     │                                │
+                     │ Vehicle Registration API       │
+                     │ Battery Prediction API         │
+                     │ Prediction Logging             │
+                     └──────────────┬─────────────────┘
+                                    │
+                ┌───────────────────┼────────────────────┐
+                │                   │                    │
+                ▼                   ▼                    ▼
+      Teacher Models         Student Model         PostgreSQL
+ (Virtual Sensor Models)   (Battery Health)    Vehicle & Prediction Logs
+
+                                    │
+                                    ▼
+                              MLflow Tracking
+                          Experiments & Registry
+
+```
 
 ---
 
+# ✨ Features
 
-## Overview
-This project implements a deployment-ready EV Battery Health Estimation system using a Teacher-Student Knowledge Distillation framework.
+- Teacher–Student Machine Learning Architecture
+- Battery Health & Degradation Prediction
+- Vehicle Registration APIs
+- Prediction Logging in PostgreSQL
+- MLflow Experiment Tracking
+- MLflow Model Registry
+- Dockerized Frontend + Backend + Database
+- Interactive React Dashboard
 
-## Project Structure
-- `data/`: Contains dataset files.
-- `models/`: Trained model artifacts (`.pkl`).
-- `backend/`: FastAPI application (`main.py`).
-- `frontend/`: React + Vite + Tailwind dashboard.
-- `results/`: Evaluation metrics and anomaly reports.
-- `train_student_model.py`: Training pipeline script.
-- `anomaly_detection.py`: Anomaly detection script.
+---
 
-## Setup & Running
+# 🛠 Tech Stack
 
-### Prerequisites
-- Python 3.9+
-- Node.js & npm
+| Category | Technologies |
+|-----------|-------------|
+| Frontend | React, Vite |
+| Backend | FastAPI |
+| ML | Scikit-Learn |
+| Database | PostgreSQL |
+| Experiment Tracking | MLflow |
+| Containerization | Docker, Docker Compose |
+| Serialization | Joblib |
 
-### 1. Backend (FastAPI)
-Navigate to the root directory and install Python dependencies:
-```bash
-pip install fastapi uvicorn pydantic scikit-learn pandas joblib matplotlib seaborn
+---
+
+# 📂 Project Structure
+
+```
+EV_LOCAL_MLOPS
+│
+├── backend/
+├── frontend/
+├── models/
+├── notebooks/
+├── results/
+├── docker-compose.yml
+└── README.md
 ```
 
-Start the server:
-```bash
-cd backend
-uvicorn main:app --reload
-```
-The API will be available at `http://localhost:8000`.
+---
 
-### 2. Frontend (React)
-Navigate to the frontend directory:
-```bash
-cd frontend
-npm install
-npm run dev
-```
-Access the Dashboard at `http://localhost:5173`.
+# ▶️ Run the Project
 
-## Features
-- **SOH Estimation**: Estimates State of Health using minimal inputs.
-- **Latency Features**: Infers internal states (Cycles, Temp) from simple inputs.
-- **Anomaly Detection**: Flags potential battery anomalies.
+```bash
+docker compose up --build
+```
+
+Frontend
+
+```
+http://localhost:5173
+```
+
+Backend
+
+```
+http://localhost:8000/docs
+```
+
+MLflow
+
+```
+http://localhost:5000
+```
+
+---
+
+# 🔗 API Endpoints
+
+| Method | Endpoint |
+|---------|----------|
+| POST | /register_vehicle |
+| GET | /get_vehicles/{user_id} |
+| POST | /predict |
+| POST | /chat |
+
+---
+
+# 📊 Sample Prediction Output
+
+```json
+{
+  "predicted_soh": 86.99,
+  "degradation": 13.01,
+  "estimated_soc": 100,
+  "risk_rating": "Low Risk",
+  "anomaly_warning": false,
+  "model_version": "Student-v1"
+}
+```
+
+---
+
+# 📈 Highlights
+
+- Teacher–Student ML Architecture
+- Virtual Sensor Estimation
+- Experiment Tracking with MLflow
+- Model Registry
+- Prediction Audit Logging
+- Production-ready Docker Deployment
+
+---
+
+## 👨‍💻 Author
+
+**Harsh Gangurde**
+
+AI Engineer | Machine Learning | MLOps | FastAPI | Docker | PostgreSQL
